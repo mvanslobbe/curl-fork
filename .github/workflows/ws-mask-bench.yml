@@ -1,0 +1,38 @@
+name: ws-mask-bench
+
+'on':
+  push:
+    branches:
+      - bench/ws-mask
+
+permissions: {}
+
+jobs:
+  bench:
+    name: ${{ matrix.os }} ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+        compiler: [gcc, clang]
+        exclude:
+          # 'gcc' on macOS is Apple clang
+          - os: macos-latest
+            compiler: gcc
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: pick compiler
+        env:
+          COMPILER: ${{ matrix.compiler }}
+        run: |
+          command -v "$COMPILER" >/dev/null ||
+            { sudo apt-get update && sudo apt-get install -y "$COMPILER"; }
+          echo "CC=$COMPILER" >> "$GITHUB_ENV"
+      - name: run
+        run: |
+          ./bench/run.sh | tee result.md
+          cat result.md >> "$GITHUB_STEP_SUMMARY"
