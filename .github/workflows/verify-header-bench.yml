@@ -4,6 +4,14 @@ name: verify-header-bench
   push:
     branches:
       - bench/verify-header
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'curl/curl commit to compare against'
+        default: '178e5077b6'
+      head:
+        description: 'curl-fork commit to benchmark'
+        default: 'fa26684733'
 
 permissions: {}
 
@@ -33,6 +41,9 @@ jobs:
             { sudo apt-get update && sudo apt-get install -y "$COMPILER"; }
           echo "CC=$COMPILER" >> "$GITHUB_ENV"
       - name: run
+        env:
+          BASE: ${{ inputs.base || '178e5077b6' }}
+          HEAD: ${{ inputs.head || 'fa26684733' }}
         run: |
           ./bench/run.sh | tee result.md
           cat result.md >> "$GITHUB_STEP_SUMMARY"

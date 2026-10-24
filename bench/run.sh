@@ -1,10 +1,12 @@
 #!/bin/sh
-# Compare './perf respheaders' in curl master and with the PR change
-# applied. Both trees are built the same way, at -O2, and run alternately
-# so runner noise hits both alike.
+# Compare './perf respheaders' in curl master and in the PR branch.
+# Both trees are built the same way, at -O2, and run alternately so
+# runner noise hits both alike.
 set -eu
 
 BASE=${BASE:-178e5077b6}                   # curl master the PR is based on
+HEAD=${HEAD:-fa26684733}                   # PR head
+FORK=${FORK:-mvanslobbe/curl-fork}
 CC=${CC:-cc}
 ROUNDS=${ROUNDS:-9}
 LOOPS=${LOOPS:-50000}
@@ -14,14 +16,16 @@ W=${WORK:-$HERE/work-$(basename "$CC")}
 mkdir -p "$W"
 cd "$W"
 
-for v in master pr; do
-  if [ ! -d "src-$v" ]; then
-    curl -fsSL "https://codeload.github.com/curl/curl/tar.gz/$BASE" | tar xz
-    mv "curl-$BASE"* "src-$v"
+fetch() { # repo commit dir
+  if [ ! -d "$3" ]; then
+    mkdir "$3"
+    curl -fsSL "https://codeload.github.com/$1/tar.gz/$2" |
+      tar xz -C "$3" --strip-components=1
   fi
-done
-[ -f src-pr/.patched ] ||
-  { patch -s -d src-pr -p1 < "$HERE/verify-header.patch" && touch src-pr/.patched; }
+}
+fetch curl/curl "$BASE" src-master
+fetch "$FORK" "$HEAD" src-pr
+echo "master $BASE (curl/curl), PR $HEAD ($FORK)"
 
 cpu=$(sysctl -n machdep.cpu.brand_string 2>/dev/null) || true
 [ -n "$cpu" ] ||
